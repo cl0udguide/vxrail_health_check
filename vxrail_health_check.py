@@ -110,7 +110,7 @@ def check_hosts_health(base_url: str, headers: Dict[str, str]) -> bool:
         True if all hosts are healthy, False otherwise
     """
     print("\nChecking hosts health...")
-    response = make_api_request(base_url, "/rest/vxm/v7/hosts", headers)
+    response = make_api_request(base_url, "/rest/vxm/v14/hosts", headers)
     
     if not response:
         return False
@@ -120,10 +120,14 @@ def check_hosts_health(base_url: str, headers: Dict[str, str]) -> bool:
         hostname = host.get('hostname', 'Unknown')
         health_status = host.get('health', 'Unknown')
         power_status = host.get('power_status', 'Unknown')
+        tpm_version = host.get('tpm_version', 'N/A')
+        tpm_status = host.get('tpm_status', 'N/A')
         
         print(f"\nHost: {hostname}")
         print(f"Health Status: {health_status}")
         print(f"Power Status: {power_status}")
+        print(f"TPM Version: {tpm_version}")
+        print(f"TPM Status: {tpm_status}")
         
         if health_status.lower() != 'healthy':
             all_healthy = False
@@ -209,3 +213,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
         sys.exit(1)
+
