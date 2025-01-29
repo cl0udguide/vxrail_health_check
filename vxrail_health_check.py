@@ -73,6 +73,26 @@ def make_api_request(base_url: str, endpoint: str, headers: Dict[str, str]) -> O
             print(f"Error: An unexpected error occurred: {e}")
         return None
 
+def check_vxrail_version(base_url: str, headers: Dict[str, str]) -> Optional[str]:
+    """
+    Check VxRail Manager version to ensure API compatibility.
+    
+    Args:
+        base_url: Base URL of the VxRail Manager
+        headers: Request headers including authentication
+    
+    Returns:
+        Version string if successful, None if failed
+    """
+    print("\nChecking VxRail version...")
+    response = make_api_request(base_url, "/rest/vxm/v1/system", headers)
+    
+    if response:
+        version = response.get('version')
+        print(f"VxRail Version: {version}")
+        return version
+    return None
+
 def check_cluster_health(base_url: str, headers: Dict[str, str]) -> bool:
     """
     Check the overall cluster health status.
@@ -110,7 +130,7 @@ def check_hosts_health(base_url: str, headers: Dict[str, str]) -> bool:
         True if all hosts are healthy, False otherwise
     """
     print("\nChecking hosts health...")
-    response = make_api_request(base_url, "/rest/vxm/v14/hosts", headers)
+    response = make_api_request(base_url, "/rest/vxm/v16/hosts", headers)
     
     if not response:
         return False
@@ -122,12 +142,14 @@ def check_hosts_health(base_url: str, headers: Dict[str, str]) -> bool:
         power_status = host.get('power_status', 'Unknown')
         tpm_version = host.get('tpm_version', 'N/A')
         tpm_status = host.get('tpm_status', 'N/A')
+        disk_tier = host.get('disk_tier', 'N/A')  # New in v16
         
         print(f"\nHost: {hostname}")
         print(f"Health Status: {health_status}")
         print(f"Power Status: {power_status}")
         print(f"TPM Version: {tpm_version}")
         print(f"TPM Status: {tpm_status}")
+        print(f"Disk Tier: {disk_tier}")
         
         if health_status.lower() != 'healthy':
             all_healthy = False
@@ -187,6 +209,15 @@ def main():
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("-" * 50)
     
+    # Check VxRail version first
+    version = check_vxrail_version(base_url, headers)
+    if not version:
+        print("Failed to determine VxRail version. Health check may not be accurate.")
+    elif version < "8.0.000":
+        print("Warning: This script is optimized for VxRail 8.0.000 or later.")
+        print(f"Current version: {version}")
+        print("Some features may not be available.")
+    
     # Perform health checks
     cluster_healthy = check_cluster_health(base_url, headers)
     hosts_healthy = check_hosts_health(base_url, headers)
@@ -213,4 +244,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\nAn unexpected error occurred: {e}")
         sys.exit(1)
-
