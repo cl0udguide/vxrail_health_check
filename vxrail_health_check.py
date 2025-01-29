@@ -158,33 +158,47 @@ def check_hosts_health(base_url: str, headers: Dict[str, str]) -> bool:
 
 def check_storage_health(base_url: str, headers: Dict[str, str]) -> bool:
     """
-    Check the health status of storage components.
+    Check the health status of storage components using host disk information.
     
     Args:
         base_url: Base URL of the VxRail Manager
         headers: Request headers including authentication
     
     Returns:
-        True if storage is healthy, False otherwise
+        True if all storage components are healthy, False otherwise
     """
     print("\nChecking storage health...")
-    response = make_api_request(base_url, "/rest/vxm/v1/disks", headers)
+    response = make_api_request(base_url, "/rest/vxm/v16/hosts", headers)
     
     if not response:
         return False
     
     all_healthy = True
-    for disk in response:
-        disk_sn = disk.get('sn', 'Unknown')
-        health_status = disk.get('health', 'Unknown')
-        disk_type = disk.get('disk_type', 'Unknown')
+    storage_info = {}  # Track unique disks by serial number
+    
+    for host in response:
+        hostname = host.get('hostname', 'Unknown')
+        print(f"\nHost: {hostname}")
         
-        print(f"\nDisk SN: {disk_sn}")
-        print(f"Type: {disk_type}")
-        print(f"Health Status: {health_status}")
-        
-        if health_status.lower() != 'healthy':
-            all_healthy = False
+        for disk in host.get('disks', []):
+            sn = disk.get('sn', 'Unknown')
+            if sn not in storage_info:
+                disk_state = disk.get('disk_state', 'Unknown')
+                disk_type = disk.get('disk_type', 'Unknown')
+                disk_tier = disk.get('disk_tier', 'Unknown')
+                capacity = disk.get('capacity', 'Unknown')
+                
+                print(f"Disk SN: {sn}")
+                print(f"State: {disk_state}")
+                print(f"Type: {disk_type}")
+                print(f"Tier: {disk_tier}")
+                print(f"Capacity: {capacity}")
+                
+                if disk_state.upper() != 'OK':
+                    all_healthy = False
+                    print(f"Warning: Disk {sn} is in {disk_state} state")
+                
+                storage_info[sn] = disk_state
     
     return all_healthy
 
